@@ -13,7 +13,7 @@ lex_generateTokens(char* source) {
 	L->tokens->length = 0;
 	L->tokens_len = 0;
 	L->source = source;
-	L->current_line = 0;
+	L->current_line = 1;
 
 	do_lex(L);
 
@@ -47,8 +47,12 @@ do_lex(spy_lexstate* L) {
 	char* buf = malloc(65536 * sizeof(char));
 	char* bp = buf;
 	while (*L->at) {
+		/* is whitespace */
+		if (*L->at == ' ') {
+			L->at++;
+			continue;
 		/* is newline */
-		if (*L->at == '\n') {
+		} else if (*L->at == '\n') {
 			L->current_line++;
 			L->at++;
 			continue;
@@ -198,6 +202,12 @@ do_lex(spy_lexstate* L) {
 			spy_tokentype type = IDENTIFIER;
 			if (!strncmp(buf, "struct", 6)) {
 				type = STRUCT;
+			} else if (!strncmp(buf, "cast", 4)) {
+				type = CAST;	
+			} else if (!strncmp(buf, "free", 4)) {
+				type = FREE;
+			} else if (!strncmp(buf, "new", 3)) {
+				type = NEW;
 			} else if (	!strncmp(buf, "u8", 2) ||
 						!strncmp(buf, "u16", 3) ||
 						!strncmp(buf, "u32", 3) ||
@@ -218,23 +228,46 @@ do_lex(spy_lexstate* L) {
 		L->at++;	
 	}
 	
-	/* take a pass through the tokens to validate syntax and to
-	 * find datatypes
-	 */
 	spy_token* token = L->tokens->head;
-	
-	while (token) {
-		/* if we find an identifier and the previous token
-		 * was STRUCT, we can mark the identifier as a datatype
-		 */
-		if (token->type == IDENTIFIER && token->prev 
-			&& token->prev->type == STRUCT) {
-			token->type = DATATYPE;	
+
+	/* first make a pass to mark datatypes */
+	while (token->next) {
+		if (token->type == STRUCT && token->next->type == IDENTIFIER) {
+			/* TODO mark token->next->word as a datatype */
+			token = token->next;
 		}
+		token = token->next;
+	}
+	
+	token = L->tokens->head;
+
+	/* now make a pass to validate syntax */	
+	while (token->next) {
+
+		switch (token->type) {
+			case RETURN_ARROW:
+				/* validate that there is a return type to the function */
+				if (token->next->type != DATATYPE) {
+					die(L, token, "Expected return type after token `->`"); 
+				/* validate that there is a function body after the return type */
+				} else if (token->next->next && token->next->next->type != OPENCURL) {
+					die(L, token, "Expected function body after return type");
+				}
+				break;
+			default:
+				break;
+		}
+
 		token = token->next;
 	}
 
 	dump_tokens(L);
+}
+
+static void
+die(spy_lexstate* L, spy_token* token, const char* message) {
+	printf("\n\nSpyre Lex Error:\n\nMESSAGE: %s\n   LINE: %d\n\n\n", message, token->line);
+	exit(1);
 }
 
 static void

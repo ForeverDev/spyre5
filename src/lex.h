@@ -37,6 +37,9 @@ enum spy_tokentype {
 	RETURN_ARROW,
 	STRUCT,
 	DATATYPE,
+	CAST,
+	FREE,
+	NEW,
 	IDENTIFIER
 };
 
@@ -69,5 +72,6 @@ spy_tokenlist*		lex_generateTokens(char*);
 static void			push_token(spy_lexstate*, const char*, spy_tokentype);
 static void			do_lex(spy_lexstate*);
 static void			dump_tokens(spy_lexstate*);
+static void			die(spy_lexstate*, spy_token*, const char*);
 
 #endif
