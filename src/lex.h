@@ -3,75 +3,75 @@
 
 #include <stddef.h>
 
-typedef struct	spy_token			spy_token;
-typedef struct	spy_tokenlist		spy_tokenlist;
-typedef struct	spy_lexstate		spy_lexstate;
-typedef enum	spy_tokentype		spy_tokentype;
+typedef struct	lex_token			lex_token;
+typedef struct	lex_tokenlist		lex_tokenlist;
+typedef struct	lex_state			lex_state;
+typedef enum	lex_tokentype		lex_tokentype;
 
-enum spy_tokentype {
-	UNKNOWN = 0x00,
-	NUMBER_INT,
-	NUMBER_FLOAT,
-	STRING_LITERAL,
-	ADD,
-	SUBTRACT,
-	ASTER, /* could be dereference or multiply */
-	DIVIDE,
-	MODULUS,
-	INCREMENT_ONE,
-	DECREMENT_ONE,
-	ADD_INPLACE,
-	SUBTRACT_INPLACE,
-	MULTIPLY_INPLACE,
-	DIVIDE_INPLACE,
-	MODULUS_INPLACE,
-	OPENPAR,
-	CLOSEPAR,
-	OPENSQ,
-	CLOSESQ,
-	OPENCURL,
-	CLOSECURL,
-	COMMA,
-	COLON,
-	SEMICOLON,
-	RETURN_ARROW,
-	STRUCT,
-	DATATYPE,
-	CAST,
-	FREE,
-	NEW,
-	IDENTIFIER
+enum lex_tokentype {
+	TOK_UNKNOWN = 0x00,
+	TOK_NUMBER_INT,
+	TOK_NUMBER_FLOAT,
+	TOK_STRING_LITERAL,
+	TOK_ADD,
+	TOK_SUBTRACT,
+	TOK_ASTER, /* could be dereference or multiply */
+	TOK_DIVIDE,
+	TOK_MODULUS,
+	TOK_INCREMENT_ONE,
+	TOK_DECREMENT_ONE,
+	TOK_ADD_INPLACE,
+	TOK_SUBTRACT_INPLACE,
+	TOK_MULTIPLY_INPLACE,
+	TOK_DIVIDE_INPLACE,
+	TOK_MODULUS_INPLACE,
+	TOK_OPENPAR,
+	TOK_CLOSEPAR,
+	TOK_OPENSQ,
+	TOK_CLOSESQ,
+	TOK_OPENCURL,
+	TOK_CLOSECURL,
+	TOK_COMMA,
+	TOK_COLON,
+	TOK_DOUBLE_COLON,
+	TOK_SEMICOLON,
+	TOK_RETURN_ARROW,
+	TOK_STRUCT,
+	TOK_DATATYPE,
+	TOK_CAST,
+	TOK_FREE,
+	TOK_NEW,
+	TOK_IDENTIFIER
 };
 
 
-struct spy_token {
+struct lex_token {
 	char*			word;	
-	size_t			word_len;
 	unsigned int	type; 
 	unsigned int	line;
-	spy_token*		next;
-	spy_token*		prev;
+	lex_token*		next;
+	lex_token*		prev;
 };
 
-struct spy_tokenlist {
-	spy_token*		head;
-	spy_token*		tail;
-	size_t			length;
+struct lex_tokenlist {
+	lex_token*		head;
+	lex_token*		tail;
 };
 
-struct spy_lexstate {
-	spy_tokenlist*	tokens;
-	size_t			tokens_len;
-	size_t			source_len;
+struct lex_state {
+	lex_tokenlist*	tokens;
+	lex_tokenlist*	datatypes;
 	char*			source;
 	char*			at;
 	unsigned int	current_line;
 };
 
-spy_tokenlist*		lex_generateTokens(char*);
-static void			push_token(spy_lexstate*, const char*, spy_tokentype);
-static void			do_lex(spy_lexstate*);
-static void			dump_tokens(spy_lexstate*);
-static void			die(spy_lexstate*, spy_token*, const char*);
+lex_tokenlist*		lex_generateTokens(char*);
+static void			push_token(lex_state*, const char*, lex_tokentype);
+static void			push_datatype(lex_state*, const char*);
+static lex_token*	newtoken(lex_state*, const char*, lex_tokentype);
+static void			do_lex(lex_state*);
+static void			dump_tokens(lex_state*);
+static void			die(lex_state*, lex_token*, const char*);
 
 #endif

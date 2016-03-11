@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
 	fclose(finput);
 
 	/* execute the lexer */
-	lex_generateTokens(fcontents);
+	parse_generateSyntaxTree(lex_generateTokens(fcontents));
 	
 	remove(cfilename);	
 

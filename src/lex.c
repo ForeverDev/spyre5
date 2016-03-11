@@ -4,14 +4,15 @@
 #include <ctype.h>
 #include "lex.h"
 
-spy_tokenlist*
+lex_tokenlist*
 lex_generateTokens(char* source) {
-	spy_lexstate* L = malloc(sizeof(spy_lexstate));	
-	L->tokens = malloc(sizeof(spy_tokenlist));
+	lex_state* L = malloc(sizeof(lex_state));	
+	L->tokens = malloc(sizeof(lex_tokenlist));
 	L->tokens->head = NULL;
 	L->tokens->tail = NULL;
-	L->tokens->length = 0;
-	L->tokens_len = 0;
+	L->datatypes = malloc(sizeof(lex_tokenlist));
+	L->datatypes->head = NULL;
+	L->datatypes->tail = NULL;
 	L->source = source;
 	L->current_line = 1;
 
@@ -21,16 +22,8 @@ lex_generateTokens(char* source) {
 }
 
 static void
-push_token(spy_lexstate* L, const char* word, spy_tokentype type) {
-	spy_token* token = malloc(sizeof(spy_token));
-	size_t len = strlen(word);
-	token->word = malloc(len + 1);
-	strcpy(token->word, word);
-	token->word[len] = 0;
-	token->word_len = len;
-	token->type = type;
-	token->line = L->current_line;
-	token->next = NULL;
+push_token(lex_state* L, const char* word, lex_tokentype type) {
+	lex_token* token = newtoken(L, word, type);
 	if (!L->tokens->head && !L->tokens->tail) {
 		L->tokens->head = L->tokens->tail = token;
 		token->prev = NULL;
@@ -42,7 +35,64 @@ push_token(spy_lexstate* L, const char* word, spy_tokentype type) {
 }
 
 static void
-do_lex(spy_lexstate* L) {
+push_datatype(lex_state* L, const char* word) {
+	lex_token* token = newtoken(L, word, TOK_DATATYPE);
+	if (!L->datatypes->head && !L->datatypes->tail) {
+		L->datatypes->head = L->datatypes->tail = token;
+		token->prev = NULL;
+	} else {
+		token->prev = L->datatypes->tail;
+		L->datatypes->tail->next = token;
+		L->datatypes->tail = token;
+	}
+}
+
+static int
+is_datatype(lex_state* L, const char* word) {
+	lex_token* token = L->datatypes->head;
+	while (token) {
+		if (!strcmp(token->word, word)) return 1;
+		token = token->next;
+	}
+	return 0;
+}
+
+static lex_token*
+newtoken(lex_state* L, const char* word, lex_tokentype type) {
+	lex_token* token = malloc(sizeof(lex_token));
+	size_t len = strlen(word);
+	token->word = malloc(len + 1);
+	strcpy(token->word, word);
+	token->word[len] = 0;
+	token->type = type;
+	token->line = L->current_line;
+	token->next = NULL;
+	token->prev = NULL;
+	return token;
+}
+
+
+static void
+die(lex_state* L, lex_token* token, const char* message) {
+	printf("\n\nSpyre Lex Error:\n\nMESSAGE: %s\n   LINE: %d\n\n\n", message, token->line);
+	exit(1);
+}
+
+static void
+dump_tokens(lex_state* L) {
+	lex_token* token = L->tokens->head;
+	while (token) {
+		printf("TOKEN (type: %02d, line: %03d, word: '%s')\n", 
+			token->type,
+			token->line, 
+			token->word
+		);
+		token = token->next;
+	}
+}
+
+static void
+do_lex(lex_state* L) {
 	L->at = L->source;	
 	char* buf = malloc(65536 * sizeof(char));
 	char* bp = buf;
@@ -68,7 +118,7 @@ do_lex(spy_lexstate* L) {
 			}
 			*bp = 0;
 			L->at--;
-			push_token(L, buf, is_fractional ? NUMBER_INT : NUMBER_FLOAT);
+			push_token(L, buf, is_fractional ? TOK_NUMBER_INT : TOK_NUMBER_FLOAT);
 			bp = buf;
 		/* is a string */
 		} else if (*L->at == '"') {
@@ -93,100 +143,106 @@ do_lex(spy_lexstate* L) {
 			}
 			*bp = 0;
 			bp = buf;
-			push_token(L, buf, STRING_LITERAL);
+			push_token(L, buf, TOK_STRING_LITERAL);
 		/* is an operator or some sort of punctuation */
 		} else if (ispunct(*L->at)) {
 			*bp++ = *L->at;
-			spy_tokentype type;
+			lex_tokentype type;
 			switch (*L->at) {
 				case '+':
 					if (*(L->at + 1) == '+') {
-						type = INCREMENT_ONE;
+						type = TOK_INCREMENT_ONE;
 						*bp++ = '+';
 						L->at++;
 					} else if (*(L->at + 1) == '=') {
-						type = ADD_INPLACE;
+						type = TOK_ADD_INPLACE;
 						*bp++ = '=';
 						L->at++;
 					} else {
-						type = ADD;
+						type = TOK_ADD;
 					}
 					break;
 				case '-':
 					if (*(L->at + 1) == '-') {
-						type = DECREMENT_ONE;
+						type = TOK_DECREMENT_ONE;
 						*bp++ = '-';
 						L->at++;
 					} else if (*(L->at + 1) == '=') {
-						type = SUBTRACT_INPLACE;
+						type = TOK_SUBTRACT_INPLACE;
 						*bp++ = '=';
 						L->at++;
 					} else if (*(L->at + 1) == '>') {
-						type = RETURN_ARROW,
+						type = TOK_RETURN_ARROW,
 						*bp++ = '>';
 						L->at++;
 					} else {
-						type = SUBTRACT;
+						type = TOK_SUBTRACT;
 					}
 					break;
 				case '*':
 					if (*(L->at + 1) == '=') {
-						type = MULTIPLY_INPLACE;
+						type = TOK_MULTIPLY_INPLACE;
 						*bp++ = '=';
 						L->at++;
 					} else {
-						type = ASTER;
+						type = TOK_ASTER;
 					}
 					break;
 				case '/':
 					if (*(L->at + 1) == '=') {
-						type = DIVIDE_INPLACE;
+						type = TOK_DIVIDE_INPLACE;
 						*bp++ = '=';
 						L->at++;
 					} else {
-						type = DIVIDE;
+						type = TOK_DIVIDE;
 					}
 					break;
 				case '%':
 					if (*(L->at + 1) == '=') {
-						type = MODULUS_INPLACE;
+						type = TOK_MODULUS_INPLACE;
 						*bp++ = '=';
 						L->at++;
 					} else {
-						type = MODULUS;
+						type = TOK_MODULUS;
 					}
 					break;
 				case '(':
-					type = OPENPAR;
+					type = TOK_OPENPAR;
 					break;
 				case ')':
-					type = CLOSEPAR;
+					type = TOK_CLOSEPAR;
 					break;
 				case '[':
-					type = OPENSQ;
+					type = TOK_OPENSQ;
 					break;
 				case ']':
-					type = CLOSESQ;
+					type = TOK_CLOSESQ;
 					break;
 				case '{':
-					type = OPENCURL;
+					type = TOK_OPENCURL;
 					break;
 				case '}':
-					type = CLOSECURL;
+					type = TOK_CLOSECURL;
 					break;
 				case ',':
-					type = COMMA;
+					type = TOK_COMMA;
 					break;
 				case ':':
-					type = COLON;
+					if (*(L->at + 1) == ':') {
+						type = TOK_DOUBLE_COLON;
+						*bp++ = ':';
+						L->at++;
+					} else {
+						type = TOK_COLON;
+					}
 					break;
 				case ';':
-					type = SEMICOLON;
+					type = TOK_SEMICOLON;
 					break;
 				default:
 					/* TODO throw some sort of error? */
 					printf("UNKNOWN %c\n", *L->at);
-					type = UNKNOWN;
+					type = TOK_UNKNOWN;
 					break;
 			}
 			*bp = 0;
@@ -199,15 +255,15 @@ do_lex(spy_lexstate* L) {
 			L->at--;
 			*bp = 0;
 			bp = buf;
-			spy_tokentype type = IDENTIFIER;
+			lex_tokentype type = TOK_IDENTIFIER;
 			if (!strncmp(buf, "struct", 6)) {
-				type = STRUCT;
+				type = TOK_STRUCT;
 			} else if (!strncmp(buf, "cast", 4)) {
-				type = CAST;	
+				type = TOK_CAST;	
 			} else if (!strncmp(buf, "free", 4)) {
-				type = FREE;
+				type = TOK_FREE;
 			} else if (!strncmp(buf, "new", 3)) {
-				type = NEW;
+				type = TOK_NEW;
 			} else if (	!strncmp(buf, "u8", 2) ||
 						!strncmp(buf, "u16", 3) ||
 						!strncmp(buf, "u32", 3) ||
@@ -220,7 +276,7 @@ do_lex(spy_lexstate* L) {
 						!strncmp(buf, "float64", 7) ||
 						!strncmp(buf, "int", 3))
 			{
-				type = DATATYPE;	
+				type = TOK_DATATYPE;	
 			}
 
 			push_token(L, buf, type);
@@ -228,12 +284,12 @@ do_lex(spy_lexstate* L) {
 		L->at++;	
 	}
 	
-	spy_token* token = L->tokens->head;
+	lex_token* token = L->tokens->head;
 
 	/* first make a pass to mark datatypes */
 	while (token->next) {
-		if (token->type == STRUCT && token->next->type == IDENTIFIER) {
-			/* TODO mark token->next->word as a datatype */
+		if (token->type == TOK_STRUCT && token->next->type == TOK_IDENTIFIER) {
+			push_datatype(L, token->next->word);
 			token = token->next;
 		}
 		token = token->next;
@@ -243,15 +299,22 @@ do_lex(spy_lexstate* L) {
 
 	/* now make a pass to validate syntax */	
 	while (token->next) {
-
+		
+		/* TODO add much more validataion */
 		switch (token->type) {
-			case RETURN_ARROW:
+			case TOK_RETURN_ARROW:
 				/* validate that there is a return type to the function */
-				if (token->next->type != DATATYPE) {
+				if (!is_datatype(L, token->next->word)) {
 					die(L, token, "Expected return type after token `->`"); 
 				/* validate that there is a function body after the return type */
-				} else if (token->next->next && token->next->next->type != OPENCURL) {
+				} else if (token->next->next && token->next->next->type != TOK_OPENCURL) {
 					die(L, token, "Expected function body after return type");
+				}
+				break;
+			case TOK_DOUBLE_COLON:
+				/* validate that there is an argument list after DOUBLE_COLON */
+				if (token->next->type != TOK_OPENPAR) {
+					die(L, token, "Expected argument list after token '::'");
 				}
 				break;
 			default:
@@ -262,23 +325,4 @@ do_lex(spy_lexstate* L) {
 	}
 
 	dump_tokens(L);
-}
-
-static void
-die(spy_lexstate* L, spy_token* token, const char* message) {
-	printf("\n\nSpyre Lex Error:\n\nMESSAGE: %s\n   LINE: %d\n\n\n", message, token->line);
-	exit(1);
-}
-
-static void
-dump_tokens(spy_lexstate* L) {
-	spy_token* token = L->tokens->head;
-	while (token) {
-		printf("TOKEN (type: %02d, line: %03d, word: '%s')\n", 
-			token->type,
-			token->line, 
-			token->word
-		);
-		token = token->next;
-	}
 }
