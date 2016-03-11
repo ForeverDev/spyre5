@@ -1,3 +1,5 @@
-main :: (n : real) -> real {
+struct test {
 
-}
+};
+
+identifier;

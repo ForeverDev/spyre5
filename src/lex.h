@@ -35,7 +35,8 @@ enum spy_tokentype {
 	COLON,
 	SEMICOLON,
 	RETURN_ARROW,
-
+	STRUCT,
+	DATATYPE,
 	IDENTIFIER
 };
 

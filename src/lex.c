@@ -189,15 +189,51 @@ do_lex(spy_lexstate* L) {
 			bp = buf;
 			push_token(L, buf, type);
 		/* is identifier or keyword */
-		} else if (isalnum(*L->at)) {
-			while (*L->at && isalnum(*L->at)) *bp++ = *L->at++;
+		} else if (isalnum(*L->at) || *L->at == '_') {
+			while (*L->at && (isalnum(*L->at) || *L->at == '_'))
+				*bp++ = *L->at++;
 			L->at--;
 			*bp = 0;
 			bp = buf;
-			push_token(L, buf, IDENTIFIER);
+			spy_tokentype type = IDENTIFIER;
+			if (!strncmp(buf, "struct", 6)) {
+				type = STRUCT;
+			} else if (	!strncmp(buf, "u8", 2) ||
+						!strncmp(buf, "u16", 3) ||
+						!strncmp(buf, "u32", 3) ||
+						!strncmp(buf, "u64", 3) ||
+						!strncmp(buf, "s8", 2) ||
+						!strncmp(buf, "s16", 3) ||
+						!strncmp(buf, "s32", 3) ||
+						!strncmp(buf, "s64", 3) ||
+						!strncmp(buf, "float32", 7) ||
+						!strncmp(buf, "float64", 7) ||
+						!strncmp(buf, "int", 3))
+			{
+				type = DATATYPE;	
+			}
+
+			push_token(L, buf, type);
 		}
 		L->at++;	
 	}
+	
+	/* take a pass through the tokens to validate syntax and to
+	 * find datatypes
+	 */
+	spy_token* token = L->tokens->head;
+	
+	while (token) {
+		/* if we find an identifier and the previous token
+		 * was STRUCT, we can mark the identifier as a datatype
+		 */
+		if (token->type == IDENTIFIER && token->prev 
+			&& token->prev->type == STRUCT) {
+			token->type = DATATYPE;	
+		}
+		token = token->next;
+	}
+
 	dump_tokens(L);
 }
 
