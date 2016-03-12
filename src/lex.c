@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdarg.h>
 #include "lex.h"
 
 lex_tokenlist*
@@ -72,10 +73,20 @@ newtoken(lex_state* L, const char* word, lex_tokentype type) {
 }
 
 
-static void
-die(lex_state* L, lex_token* token, const char* message) {
-	printf("\n\nSpyre Lex Error:\n\nMESSAGE: %s\n   LINE: %d\n\n\n", message, token->line);
+void
+die(lex_token* token, const char* message, ...) {
+
+	char* buf = malloc(4096);
+	va_list args;
+	va_start(args, message);
+	vsprintf(buf, message, args);		
+	va_end(args);
+	printf("\n\nSpyre Compilation Error:\n\nMESSAGE: %s\nLINE: %d\n\n",
+		buf,
+		token ? token->line : 0
+	);
 	exit(1);
+
 }
 
 static void
@@ -236,6 +247,9 @@ do_lex(lex_state* L) {
 						type = TOK_COLON;
 					}
 					break;
+				case '.':
+					type = TOK_PERIOD;
+					break;
 				case ';':
 					type = TOK_SEMICOLON;
 					break;
@@ -305,16 +319,16 @@ do_lex(lex_state* L) {
 			case TOK_RETURN_ARROW:
 				/* validate that there is a return type to the function */
 				if (!is_datatype(L, token->next->word)) {
-					die(L, token, "Expected return type after token `->`"); 
+					die(token, "Expected return type after token `->`"); 
 				/* validate that there is a function body after the return type */
 				} else if (token->next->next && token->next->next->type != TOK_OPENCURL) {
-					die(L, token, "Expected function body after return type");
+					die(token, "Expected function body after return type");
 				}
 				break;
 			case TOK_DOUBLE_COLON:
 				/* validate that there is an argument list after DOUBLE_COLON */
 				if (token->next->type != TOK_OPENPAR) {
-					die(L, token, "Expected argument list after token '::'");
+					die(token, "Expected argument list after token '::'");
 				}
 				break;
 			default:
@@ -324,5 +338,4 @@ do_lex(lex_state* L) {
 		token = token->next;
 	}
 
-	dump_tokens(L);
 }

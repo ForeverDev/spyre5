@@ -1,6 +1,6 @@
 CC = gcc
 CF = -std=c11
-DEPS = build/main.o build/lex.o
+DEPS = build/main.o build/lex.o build/parse.o
 
 all: spy
 
@@ -17,3 +17,6 @@ build/main.o:
 
 build/lex.o:
 	$(CC) $(CF) -c src/lex.c -o build/lex.o
+
+build/parse.o:
+	$(CC) $(CF) -c src/parse.c -o build/parse.o

@@ -1,5 +1,9 @@
 struct test;
 
-main :: () -> test {
+main :: (meme, xdd) -> test {
 
+	factorial :: (n) {
+
+	}
+	
 }
