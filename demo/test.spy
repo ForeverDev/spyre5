@@ -1,3 +1,5 @@
-meme :: () {
+func main :: () -> real {
+	
+	return 0;
 
 }
