@@ -1,4 +1,4 @@
-CC = gcc
+CC = g++
 CF = -std=c11
 DEPS = build/main.o build/lex.o build/parse.o
 
