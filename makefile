@@ -1,6 +1,6 @@
 CC = g++
-CF = -std=c11
-DEPS = build/main.o build/lex.o build/parse.o
+CF = -Werror -Wall -W -std=c++11
+DEPS = build/main.o build/lex.o 
 
 all: spy
 
@@ -13,10 +13,7 @@ build:
 	mkdir build
 
 build/main.o:
-	$(CC) $(CF) -c src/main.c -o build/main.o
+	$(CC) $(CF) -c src/main.cpp -o build/main.o
 
 build/lex.o:
-	$(CC) $(CF) -c src/lex.c -o build/lex.o
-
-build/parse.o:
-	$(CC) $(CF) -c src/parse.c -o build/parse.o
+	$(CC) $(CF) -c src/lex.cpp -o build/lex.o
