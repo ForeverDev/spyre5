@@ -36,22 +36,24 @@ struct parse_ast {
 	parse_node*		root;
 	parse_node*		focus;
 	lex_tokenlist*	tokens;
+	lex_tokenlist*	datatypes;
 	lex_token*		at;
 };
 
 parse_ast*						parse_generateSyntaxTree(lex_tokenlist*);
 static void						do_parse(parse_ast*);
+static void						dump_ast(parse_node*);
+static int						is_datatype(parse_ast*, const char*);
 static void						push_into_block(parse_ast*, parse_node*);
 static inline void				jump_into_block(parse_ast*, parse_node*);
-static void						dump_ast(parse_node*);
-
 static void						handle_function(parse_ast*);
+static void						handle_struct(parse_ast*);
 static void						handle_declaration(parse_ast*, lex_tokenlist*);
 static void						handle_datatype(parse_ast*, lex_tokenlist*);
-
 static parse_node*				node_init(parse_nodetype); 
+static inline lex_tokenlist*	tokenlist_init();
+static void						tokenlist_push(lex_tokenlist*, lex_token*);
 
-static inline lex_tokenlist*	general_init();
-static void						general_pushtoken(lex_tokenlist*, lex_token*);
+extern void						die(lex_token*, const char*, ...);
 
 #endif

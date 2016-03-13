@@ -72,7 +72,6 @@ lex_tokenlist*		lex_generateTokens(char*);
 void				die(lex_token*, const char*, ...);
 
 static void			push_token(lex_state*, const char*, lex_tokentype);
-static void			push_datatype(lex_state*, const char*);
 static lex_token*	newtoken(lex_state*, const char*, lex_tokentype);
 static void			do_lex(lex_state*);
 static void			dump_tokens(lex_state*);

@@ -11,9 +11,6 @@ lex_generateTokens(char* source) {
 	L->tokens = malloc(sizeof(lex_tokenlist));
 	L->tokens->head = NULL;
 	L->tokens->tail = NULL;
-	L->datatypes = malloc(sizeof(lex_tokenlist));
-	L->datatypes->head = NULL;
-	L->datatypes->tail = NULL;
 	L->source = source;
 	L->current_line = 1;
 
@@ -33,29 +30,6 @@ push_token(lex_state* L, const char* word, lex_tokentype type) {
 		L->tokens->tail->next = token;
 		L->tokens->tail = token;
 	}
-}
-
-static void
-push_datatype(lex_state* L, const char* word) {
-	lex_token* token = newtoken(L, word, TOK_DATATYPE);
-	if (!L->datatypes->head && !L->datatypes->tail) {
-		L->datatypes->head = L->datatypes->tail = token;
-		token->prev = NULL;
-	} else {
-		token->prev = L->datatypes->tail;
-		L->datatypes->tail->next = token;
-		L->datatypes->tail = token;
-	}
-}
-
-static int
-is_datatype(lex_state* L, const char* word) {
-	lex_token* token = L->datatypes->head;
-	while (token) {
-		if (!strcmp(token->word, word)) return 1;
-		token = token->next;
-	}
-	return 0;
 }
 
 static lex_token*
@@ -300,17 +274,6 @@ do_lex(lex_state* L) {
 	
 	lex_token* token = L->tokens->head;
 
-	/* first make a pass to mark datatypes */
-	while (token->next) {
-		if (token->type == TOK_STRUCT && token->next->type == TOK_IDENTIFIER) {
-			push_datatype(L, token->next->word);
-			token = token->next;
-		}
-		token = token->next;
-	}
-	
-	token = L->tokens->head;
-
 	/* now make a pass to validate syntax */	
 	while (token->next) {
 		
@@ -318,10 +281,7 @@ do_lex(lex_state* L) {
 		switch (token->type) {
 			case TOK_RETURN_ARROW:
 				/* validate that there is a return type to the function */
-				if (!is_datatype(L, token->next->word)) {
-					die(token, "Expected return type after token `->`"); 
-				/* validate that there is a function body after the return type */
-				} else if (token->next->next && token->next->next->type != TOK_OPENCURL) {
+				if (token->next->next && token->next->next->type != TOK_OPENCURL) {
 					die(token, "Expected function body after return type");
 				}
 				break;

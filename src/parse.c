@@ -22,6 +22,9 @@ parse_generateSyntaxTree(lex_tokenlist* tokens) {
 	P->root->depth = 0;				/* root has depth of 0 */
 	P->focus = P->root;				/* we're inserting into ROOT's block */
 	P->tokens = tokens;
+	P->datatypes = malloc(sizeof(lex_tokenlist));
+	P->datatypes->head = NULL;
+	P->datatypes->tail = NULL;
 	for (int i = 0; i < 4; i++) {
 		P->root->general[i] = calloc(1, sizeof(lex_tokenlist));
 	}
@@ -87,19 +90,31 @@ dump_ast(parse_node* P) {
 					}
 				}	
 			}
+			free(indent);
 		}
 		dump_ast(P->inners);
 		P = P->next_in_block;
 	}
 }
 
+static int
+is_datatype(parse_ast* P, const char* identifier) {
+	lex_token* token = P->datatypes->head;
+	while (token) {
+		if (!strcmp(token->word, identifier)) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static inline lex_tokenlist*
-general_init() {
+tokenlist_init() {
 	return (lex_tokenlist *)calloc(1, sizeof(lex_tokenlist));
 }
 
 static void
-general_pushtoken(lex_tokenlist* general, lex_token* token) {
+tokenlist_push(lex_tokenlist* general, lex_token* token) {
 	/* create a copy of the token */
 	lex_token* copy = malloc(sizeof(lex_token));
 	memcpy(copy, token, sizeof(lex_token));
@@ -123,6 +138,8 @@ do_parse(parse_ast* P) {
 		/* branch to the correct functions */	
 		if (P->at->type == TOK_IDENTIFIER && P->at->next->type == TOK_DOUBLE_COLON) {
 			handle_function(P);
+		} else if (P->at->type == TOK_STRUCT) {
+			handle_struct(P);
 		}
 		P->at = P->at->next;
 	}
@@ -133,7 +150,7 @@ do_parse(parse_ast* P) {
 /* should leave the parser one token after the declaration */
 static void
 handle_declaration(parse_ast* P, lex_tokenlist* put) {
-	general_pushtoken(put, P->at);
+	tokenlist_push(put, P->at);
 	P->at = P->at->next;
 }
 
@@ -143,13 +160,19 @@ handle_datatype(parse_ast* P, lex_tokenlist* put) {
 
 }
 
+/* should leave the parser one token after the struct */
+static void
+handle_struct(parse_ast*) {
+		
+}
+
 /* should leave the parser one token after the function arguments */
 static void
 handle_function(parse_ast* P) {
 	/* expects to be on the identifier of the function */
 	parse_node* node = node_init(NODE_FUNCTION);
 	/* store the function identifier inside genera[0] */
-	general_pushtoken(node->general[0], P->at);  	
+	tokenlist_push(node->general[0], P->at);  	
 	P->at = P->at->next;
 	/* now we're on the '::' token... skip ahead two so we land
 	 * on the first token of the first argument or the closing
@@ -192,7 +215,7 @@ handle_function(parse_ast* P) {
 		token->line = 0;
 		token->next = NULL;
 		token->prev = NULL;
-		general_pushtoken(node->general[2], token);
+		tokenlist_push(node->general[2], token);
 	}
 
 	push_into_block(P, node);
