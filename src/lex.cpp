@@ -3,36 +3,37 @@
 using namespace Lex;
 
 std::vector<Token>
-Lexer::generateTokens(std::string& contents) {
-	Lexer L(contents);
+Lexer::generateTokens() {
 
 	size_t i = 0;
 	std::string buf;
 	TokenType type = TokenType::UNKNOWN;
 
-	for (; i < contents.length(); i++) {
+	std::string content = *contents;
+
+	for (; i < content.length(); i++) {
 		/* check whitespace and tab */
-		if (contents[i] == ' ' || contents[i] == '\t') {
+		if (content[i] == ' ' || content[i] == '\t') {
 			continue;
 		/* check newline */
-		} else if (contents[i] == '\n') {
-			L.current_line++;
+		} else if (content[i] == '\n') {
+			current_line++;
 			continue;
 		/* check number */
-		} else if (std::isdigit(contents[i])) {
+		} else if (std::isdigit(content[i])) {
 			bool isfloat = false;
-			while (std::isdigit(contents[i]) || contents[i] == '.') {
-				if (contents[i] == '.') isfloat = true;
-				buf += contents[i++];
+			while (std::isdigit(content[i]) || content[i] == '.') {
+				if (content[i] == '.') isfloat = true;
+				buf += content[i++];
 			}
 			i--;
 			type = isfloat ? TokenType::NUMBER_FLOAT : TokenType::NUMBER_INT;
 		/* check string */
-		} else if (contents[i] == '"') {
+		} else if (content[i] == '"') {
 			i++;
-			while (contents[i] != '"') {
-				if (contents[i] == '\\') {
-					switch (contents[i + 1]) {
+			while (content[i] != '"') {
+				if (content[i] == '\\') {
+					switch (content[i + 1]) {
 						case 'n':
 							buf += '\n';
 							break;
@@ -40,91 +41,90 @@ Lexer::generateTokens(std::string& contents) {
 							buf += '\t';
 							break;
 						default:
-							buf += contents[i + 1];
+							buf += content[i + 1];
 					}
 					i += 2;
 				} else {
-					buf += contents[i++];
+					buf += content[i++];
 				}
 			}
 			type = TokenType::STRING;
 		/* check punctuation */
-		} else if (std::ispunct(contents[i])) {
-			buf += contents[i];
-			switch (contents[i]) {
+		} else if (std::ispunct(content[i])) {
+			buf += content[i];
+			switch (content[i]) {
 				case '+':
-					if (contents[i + 1] == '+') {
+					if (content[i + 1] == '+') {
 						type = TokenType::INCREMENT;
-						buf += contents[++i];
-					} else if (contents[i + 1] == '=') {
+						buf += content[++i];
+					} else if (content[i + 1] == '=') {
 						type = TokenType::ADD_INPLACE;
-						buf += contents[++i];
+						buf += content[++i];
 					} else {
 						type = TokenType::ADD;
 					}
 					break;
 				case '-':
-					if (contents[i + 1] == '-') {
+					if (content[i + 1] == '-') {
 						type = TokenType::DECREMENT;
-						buf += contents[++i];
-					} else if (contents[i + 1] == '=') {
+						buf += content[++i];
+					} else if (content[i + 1] == '=') {
 						type = TokenType::SUBTRACT_INPLACE;
+						buf += content[++i];
+					} else if (content[i + 1] == '>') {
+						type = TokenType::RETURN_ARROW;
+						buf += content[++i];
 					} else {
 						type = TokenType::SUBTRACT;
 					}
 					break;
 				case '*':
-					if (contents[i + 1] == '=') {
+					if (content[i + 1] == '=') {
 						type = TokenType::MULTIPLY_INPLACE;
-						buf += contents[++i];
+						buf += content[++i];
 					} else {
 						type = TokenType::MULTIPLY;
 					}
 					break;
 				case '/':
-					if (contents[i + 1] == '=') {
+					if (content[i + 1] == '=') {
 						type = TokenType::DIVIDE_INPLACE;
-						buf += contents[++i];
+						buf += content[++i];
 					} else {
 						type = TokenType::DIVIDE;
 					}
 					break;
 				case '%':
-					if (contents[i + 1] == '=') {
+					if (content[i + 1] == '=') {
 						type = TokenType::MODULUS_INPLACE;
-						buf += contents[++i];
+						buf += content[++i];
 					} else {
 						type = TokenType::MODULUS;
 					}
 					break;
 				case '&':
-					if (contents[i + 1] == '=') {
+					if (content[i + 1] == '=') {
 						type = TokenType::AND_INPLACE;
-						buf += contents[++i];
+						buf += content[++i];
 					} else {
 						type = TokenType::AND;
 					}
 					break;
 				case '|':
-					if (contents[i + 1] == '=') {
+					if (content[i + 1] == '=') {
 						type = TokenType::OR_INPLACE;
-						buf += contents[++i];
+						buf += content[++i];
 					} else {
 						type = TokenType::OR;
 					}
 					break;
 				case '^':
-					if (contents[i + 1] == '=') {
-						type = TokenType::XOR_INPLACE;
-						buf += contents[++i];
-					} else {
-						type = TokenType::XOR;
-					}
+					type = TokenType::POINTER;
 					break;
 				case ':':
-					if (contents[i + 1] == ':') {
+					if (content[i + 1] == ':') {
 						type = TokenType::DOUBLE_COLON;
-						buf += contents[++i];
+						buf += content[++i];
 					} else {
 						type = TokenType::COLON;
 					}
@@ -132,21 +132,22 @@ Lexer::generateTokens(std::string& contents) {
 
 				default:
 					type = (
-						contents[i] == '{' ? TokenType::OPENCURL :
-						contents[i] == '}' ? TokenType::CLOSECURL :
-						contents[i] == '(' ? TokenType::OPENPAR :
-						contents[i] == ')' ? TokenType::CLOSEPAR :
-						contents[i] == '[' ? TokenType::OPENSQ :
-						contents[i] == ']' ? TokenType::CLOSESQ :
-						contents[i] == '.' ? TokenType::PERIOD :
-						contents[i] == ';' ? TokenType::SEMICOLON :
+						content[i] == '{' ? TokenType::OPENCURL :
+						content[i] == '}' ? TokenType::CLOSECURL :
+						content[i] == '(' ? TokenType::OPENPAR :
+						content[i] == ')' ? TokenType::CLOSEPAR :
+						content[i] == '[' ? TokenType::OPENSQ :
+						content[i] == ']' ? TokenType::CLOSESQ :
+						content[i] == '.' ? TokenType::PERIOD :
+						content[i] == ';' ? TokenType::SEMICOLON :
+						content[i] == ',' ? TokenType::COMMA :
 						TokenType::UNKNOWN
 					);
 			}
 		/* it is an identifier or unknown punctuation */	
 		} else {
-			while (std::isalnum(contents[i])) {
-				buf += contents[i++];
+			while (std::isalnum(content[i])) {
+				buf += content[i++];
 			}
 			if (buf == "struct") {
 				type = TokenType::STRUCT;
@@ -155,13 +156,11 @@ Lexer::generateTokens(std::string& contents) {
 			}
 			i--;
 		}
-		L.tokens.push_back(Token(buf, L.current_line, type));
+		tokens.push_back(Token(buf, current_line, type));
 		buf.clear();
 	}
 
-	L.dumpTokens();
-
-	return L.tokens;	
+	return tokens;	
 }
 
 void 

@@ -1,5 +1,10 @@
-func main :: () -> real {
-	
-	return 0;
+main :: (x: s32, y: s8^^) -> s32 {
+
+	factorial :: (n: u64) -> u64 {
+		
+				
+	}
 
 }
+
+

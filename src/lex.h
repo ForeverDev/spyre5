@@ -35,8 +35,11 @@ namespace Lex {
 		SEMICOLON,
 		COLON,
 		DOUBLE_COLON,
+		COMMA,
 		NUMBER_INT,
 		NUMBER_FLOAT,
+		RETURN_ARROW,
+		POINTER,
 		STRING,
 		STRUCT,
 		IDENTIFIER
@@ -53,15 +56,15 @@ namespace Lex {
 	class Lexer {
 
 		private:
-			Lexer(std::string& contents) : contents(contents) {};
 			void						dumpTokens();
 
-			std::string					contents;
+			std::string*				contents;
 			std::vector<Token>			tokens;
 			unsigned int				current_line;
 
 		public:
-			static std::vector<Token>	generateTokens(std::string&);
+			Lexer(std::string* contents) : contents(contents) {};
+			std::vector<Token>			generateTokens();
 
 	};
 }
